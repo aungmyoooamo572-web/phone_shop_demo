@@ -1,6 +1,8 @@
 package com.example.demo.catalog.entity;
 
 import com.example.demo.common.entity.BaseEntity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,6 +15,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class PhoneImage extends BaseEntity {
 
     @Id
@@ -27,5 +30,6 @@ public class PhoneImage extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "phone_id", nullable = false)
+    @JsonIgnore
     private Phone phone;
 }
