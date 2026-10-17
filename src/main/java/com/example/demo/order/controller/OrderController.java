@@ -40,6 +40,20 @@ public class OrderController {
         );
     }
 
+    /*
+     * ADMIN only: every customer's order, newest first.
+     * Must be declared before "/{orderId}" so the literal path wins over the
+     * UUID path variable.
+     */
+    @GetMapping("/all")
+    public List<OrderResponseDto> findAllOrders(
+            Authentication authentication
+    ) {
+        return orderService.findAllOrders(
+                authentication.getName()
+        );
+    }
+
     @GetMapping("/{orderId}")
     public OrderResponseDto findById(
             Authentication authentication,

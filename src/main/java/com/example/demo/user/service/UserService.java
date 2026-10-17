@@ -1,6 +1,7 @@
 package com.example.demo.user.service;
 
 import com.example.demo.exception.DuplicateResourceException;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.security.JwtService;
 import com.example.demo.user.dao.UserRepository;
 import com.example.demo.user.dto.LoginDto;
@@ -30,7 +31,7 @@ public class UserService {
     public User findById(UUID id) {
         return userRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResourceNotFoundException("User not found"));
     }
 
     public Optional<User> findByUsername(String username) {
@@ -95,7 +96,7 @@ public class UserService {
 
         User user = userRepository.findByUsername(dto.getUsername())
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResourceNotFoundException("User not found"));
 
         String token = jwtService.generateToken(user.getUsername());
 

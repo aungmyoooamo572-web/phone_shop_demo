@@ -10,9 +10,12 @@ import com.example.demo.cart.entity.Cart;
 import com.example.demo.cart.entity.CartItem;
 import com.example.demo.catalog.dao.PhoneVariantRepository;
 import com.example.demo.catalog.entity.PhoneVariant;
+import com.example.demo.exception.ConflictException;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.user.entity.User;
 import com.example.demo.user.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,22 +51,22 @@ public class CartService {
                 .orElseGet(() -> createCart(user));
 
         PhoneVariant variant = phoneVariantRepository.findById(dto.getPhoneVariantId())
-                .orElseThrow(() -> new RuntimeException("Phone variant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Phone variant not found"));
 
         if (!variant.isActive()) {
-            throw new RuntimeException("Phone variant is not active");
+            throw new ConflictException("Phone variant is not active");
         }
 
         if (variant.isDeleted()) {
-            throw new RuntimeException("Phone variant is no longer available");
+            throw new ConflictException("Phone variant is no longer available");
         }
 
         if (variant.getStock() <= 0) {
-            throw new RuntimeException("Product is out of stock");
+            throw new ConflictException("Product is out of stock");
         }
 
         if (cartItemRepository.existsByCartIdAndPhoneVariantId(cart.getId(), variant.getId())) {
-            throw new RuntimeException("Product is already in cart");
+            throw new ConflictException("Product is already in cart");
         }
 
         CartItem cartItem = new CartItem();
@@ -81,23 +84,23 @@ public class CartService {
         User user = getUser(username);
 
         Cart cart = cartRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new RuntimeException("Cart not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
 
         CartItem cartItem = cartItemRepository.findById(itemId)
-                .orElseThrow(() -> new RuntimeException("Cart item not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cart item not found"));
 
         if (!cartItem.getCart().getId().equals(cart.getId())) {
-            throw new RuntimeException("This cart item does not belong to you");
+            throw new AccessDeniedException("This cart item does not belong to you");
         }
 
         PhoneVariant variant = cartItem.getPhoneVariant();
 
         if (!variant.isActive() || variant.isDeleted()) {
-            throw new RuntimeException("Product is no longer available");
+            throw new ConflictException("Product is no longer available");
         }
 
         if (dto.getQuantity() > variant.getStock()) {
-            throw new RuntimeException("Quantity exceeds available stock");
+            throw new ConflictException("Quantity exceeds available stock");
         }
 
         cartItem.setQuantity(dto.getQuantity());
@@ -110,13 +113,13 @@ public class CartService {
         User user = getUser(username);
 
         Cart cart = cartRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new RuntimeException("Cart not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
 
         CartItem cartItem = cartItemRepository.findById(itemId)
-                .orElseThrow(() -> new RuntimeException("Cart item not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cart item not found"));
 
         if (!cartItem.getCart().getId().equals(cart.getId())) {
-            throw new RuntimeException("This cart item does not belong to you");
+            throw new AccessDeniedException("This cart item does not belong to you");
         }
 
         cart.getItems().remove(cartItem);
@@ -129,7 +132,7 @@ public class CartService {
         User user = getUser(username);
 
         Cart cart = cartRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new RuntimeException("Cart not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
 
         cart.getItems().clear();
         cartRepository.save(cart);
@@ -137,7 +140,7 @@ public class CartService {
 
     private User getUser(String username) {
         return userService.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
     private Cart createCart(User user) {

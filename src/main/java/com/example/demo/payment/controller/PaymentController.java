@@ -71,4 +71,15 @@ public class PaymentController {
         return paymentService.rejectPayment(paymentId);
     }
 
+    // ADMIN - Get all pending payments
+    @GetMapping("/pending")
+    public List<PaymentResponseDto> findPendingPayments() {
+        return paymentService.findPendingPayments();
+    }
+
+    // ADMIN - Get all payments
+    @GetMapping("/all")
+    public List<PaymentResponseDto> findAllPayments() {
+        return paymentService.findAllPayments();
+    }
 }

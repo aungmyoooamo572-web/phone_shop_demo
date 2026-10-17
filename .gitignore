@@ -31,3 +31,11 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Local secrets ###
+# Per-machine configuration such as database credentials and the JWT signing
+# secret. It lives next to pom.xml so that it is NOT packaged into the JAR, and
+# it is never committed.
+/application-local.properties
+# Legacy location: kept ignored so an old copy can never be committed by accident.
+src/main/resources/application-local.properties

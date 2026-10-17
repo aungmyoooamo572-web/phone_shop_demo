@@ -45,13 +45,28 @@ public class PhoneVariant extends BaseEntity {
     @Column(length = 500, name = "image_url")
     private String imageUrl;
 
-    @Column(nullable = false)
+    /*
+     * The Java fields are named "active"/"deleted" (not "isActive"/"isDeleted")
+     * on purpose, exactly like PhoneImage.primary:
+     *
+     * - Lombok still generates isActive()/setActive() and isDeleted()/setDeleted()
+     *   for boolean fields, so every existing caller keeps compiling.
+     * - Jackson merges the field, the getter and the setter into ONE logical
+     *   property (the getter's implicit name is "active"/"deleted"), and
+     *   @JsonProperty then renames that single property to "isActive"/"isDeleted",
+     *   which is what the React client reads.
+     *
+     * Naming the fields "isActive"/"isDeleted" made Jackson emit two properties
+     * per flag: "active" (getter) plus "isActive" (annotated field). The database
+     * columns are unchanged (is_active / is_deleted).
+     */
+    @Column(nullable = false, name = "is_active")
     @JsonProperty("isActive")
-    private boolean isActive = true;
+    private boolean active = true;
 
     @Column(nullable = false, name = "is_deleted")
     @JsonProperty("isDeleted")
-    private boolean isDeleted = false;
+    private boolean deleted = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "phone_id", nullable = false)

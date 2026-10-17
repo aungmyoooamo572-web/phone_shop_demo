@@ -2,6 +2,7 @@ package com.example.demo.catalog.service;
 
 import com.example.demo.catalog.dao.BrandRepository;
 import com.example.demo.catalog.entity.Brand;
+import com.example.demo.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +22,7 @@ public class BrandService {
     public Brand findById(UUID id) {
         return brandRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("Brand not found"));
+                        new ResourceNotFoundException("Brand not found"));
     }
 
     public boolean existsByName(String name) {

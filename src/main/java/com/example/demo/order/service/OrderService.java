@@ -4,6 +4,9 @@ import com.example.demo.cart.dao.CartRepository;
 import com.example.demo.cart.entity.Cart;
 import com.example.demo.cart.entity.CartItem;
 import com.example.demo.catalog.entity.PhoneVariant;
+import com.example.demo.exception.BadRequestException;
+import com.example.demo.exception.ConflictException;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.order.dao.OrderRepository;
 import com.example.demo.order.dto.CreateOrderDto;
 import com.example.demo.order.dto.OrderItemResponseDto;
@@ -11,9 +14,11 @@ import com.example.demo.order.dto.OrderResponseDto;
 import com.example.demo.order.entity.Order;
 import com.example.demo.order.entity.OrderItem;
 import com.example.demo.order.entity.OrderStatus;
+import com.example.demo.user.entity.Role;
 import com.example.demo.user.entity.User;
 import com.example.demo.user.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,13 +40,13 @@ public class OrderService {
             CreateOrderDto dto
     ) {
         User user = userService.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Cart cart = cartRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new RuntimeException("Cart not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
 
         if (cart.getItems().isEmpty()) {
-            throw new RuntimeException("Cart is empty");
+            throw new BadRequestException("Cart is empty");
         }
 
         Order order = new Order();
@@ -56,15 +61,15 @@ public class OrderService {
             PhoneVariant variant = cartItem.getPhoneVariant();
 
             if (!variant.isActive()) {
-                throw new RuntimeException("Phone variant is not active: " + variant.getSku());
+                throw new ConflictException("Phone variant is not active: " + variant.getSku());
             }
 
             if (variant.isDeleted()) {
-                throw new RuntimeException("Product is no longer available: " + variant.getSku());
+                throw new ConflictException("Product is no longer available: " + variant.getSku());
             }
 
             if (cartItem.getQuantity() > variant.getStock()) {
-                throw new RuntimeException("Product quantity exceeds stock: " + variant.getSku());
+                throw new ConflictException("Product quantity exceeds stock: " + variant.getSku());
             }
 
             OrderItem orderItem = new OrderItem();
@@ -99,13 +104,14 @@ public class OrderService {
             UUID orderId
     ) {
         User user = userService.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Order not found"));
 
-        if (!order.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("You are not allowed to access this order");
+        if (!canAccessOrder(user, order)) {
+            throw new AccessDeniedException("You are not allowed to access this order");
         }
 
         return toDto(order);
@@ -116,10 +122,34 @@ public class OrderService {
             String username
     ) {
         User user = userService.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         return orderRepository
                 .findByUserIdOrderByCreatedAtDesc(user.getId())
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    /*
+     * ADMIN-only listing of every customer's order, newest first.
+     * The security filter already restricts /api/orders/all to ADMIN; the role check
+     * here is defence in depth so the rule also holds for any future caller.
+     */
+    @Transactional(readOnly = true)
+    public List<OrderResponseDto> findAllOrders(
+            String username
+    ) {
+        User user = userService.findByUsername(username)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User not found"));
+
+        if (user.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("You are not allowed to view all orders");
+        }
+
+        return orderRepository
+                .findAllByOrderByCreatedAtDesc()
                 .stream()
                 .map(this::toDto)
                 .toList();
@@ -130,12 +160,13 @@ public class OrderService {
             OrderStatus newStatus
     ) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Order not found"));
 
         OrderStatus currentStatus = order.getStatus();
 
         if (!isValidTransition(currentStatus, newStatus)) {
-            throw new RuntimeException(
+            throw new ConflictException(
                     "Invalid order status transition: "
                             + currentStatus + " -> " + newStatus
             );
@@ -172,10 +203,11 @@ public class OrderService {
             String trackingNumber
     ) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Order not found"));
 
         if (order.getStatus() != OrderStatus.SHIPPED) {
-            throw new RuntimeException(
+            throw new ConflictException(
                     "Tracking number can only be added when order is SHIPPED"
             );
         }
@@ -184,6 +216,14 @@ public class OrderService {
         Order savedOrder = orderRepository.save(order);
 
         return toDto(savedOrder);
+    }
+
+    /*
+     * ADMIN accounts may read any order; a CUSTOMER may only read their own.
+     */
+    private boolean canAccessOrder(User user, Order order) {
+        return user.getRole() == Role.ADMIN
+                || order.getUser().getId().equals(user.getId());
     }
 
     private OrderResponseDto toDto(Order order) {

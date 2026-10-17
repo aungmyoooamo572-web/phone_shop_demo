@@ -12,6 +12,10 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
 
     List<Review> findByUserId(UUID userId);
 
+    List<Review> findByPhoneIdOrderByCreatedAtDesc(UUID phoneId);
+
+    List<Review> findByUserIdOrderByCreatedAtDesc(UUID userId);
+
     boolean existsByUserIdAndPhoneId(UUID userId, UUID phoneId);
 
 }

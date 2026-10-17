@@ -17,6 +17,10 @@ public class PhoneDto {
 
     private String model;
 
+    private String description;
+
+    private String imageUrl;
+
     private String processor;
 
     private BigDecimal screenSize;

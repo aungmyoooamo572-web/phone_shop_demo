@@ -65,6 +65,7 @@ public class Phone extends BaseEntity {
     private List<PhoneImage> images = new ArrayList<>();
 
     @OneToMany(mappedBy = "phone", cascade = CascadeType.ALL, orphanRemoval = true)
+    @org.hibernate.annotations.SQLRestriction("is_deleted = false")
     private List<PhoneVariant> variants = new ArrayList<>();
 
     @Column(name = "is_deleted", nullable = false)

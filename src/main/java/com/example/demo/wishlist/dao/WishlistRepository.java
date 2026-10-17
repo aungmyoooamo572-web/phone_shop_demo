@@ -11,6 +11,8 @@ public interface WishlistRepository extends JpaRepository<Wishlist, UUID> {
 
     List<Wishlist> findByUserId(UUID userId);
 
+    List<Wishlist> findByUserIdOrderByCreatedAtDesc(UUID userId);
+
     Optional<Wishlist> findByUserIdAndPhoneId(
             UUID userId,
             UUID phoneId

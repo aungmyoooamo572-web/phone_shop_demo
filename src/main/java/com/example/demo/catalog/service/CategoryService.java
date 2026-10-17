@@ -3,6 +3,7 @@ package com.example.demo.catalog.service;
 
 import com.example.demo.catalog.dao.CategoryRepository;
 import com.example.demo.catalog.entity.Category;
+import com.example.demo.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,7 +23,7 @@ public class CategoryService {
     public Category findById(UUID id) {
         return categoryRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("Category not found"));
+                        new ResourceNotFoundException("Category not found"));
     }
 
     public boolean existsByName(String name) {
